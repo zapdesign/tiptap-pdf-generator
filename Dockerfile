@@ -1,3 +1,22 @@
+# Build stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copiar package files
+COPY package*.json ./
+
+# Instalar todas as dependências (incluindo devDependencies)
+RUN npm ci
+
+# Copiar código TypeScript
+COPY tsconfig.json ./
+COPY src ./src
+
+# Build TypeScript
+RUN npm run build
+
+# Production stage
 FROM node:20-alpine
 
 # Instalar dependências do Chrome para Puppeteer
@@ -19,18 +38,11 @@ WORKDIR /app
 # Copiar package files
 COPY package*.json ./
 
-# Instalar dependências
+# Instalar apenas dependências de produção
 RUN npm ci --only=production
 
-# Copiar código TypeScript
-COPY tsconfig.json ./
-COPY src ./src
-
-# Build TypeScript
-RUN npm run build
-
-# Limpar arquivos de desenvolvimento
-RUN rm -rf src tsconfig.json
+# Copiar arquivos compilados do build stage
+COPY --from=builder /app/dist ./dist
 
 EXPOSE 3001
 
